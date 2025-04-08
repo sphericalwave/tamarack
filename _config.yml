@@ -1,8 +1,8 @@
 title: Tamarack Environmental
 email: info@tamarackenvironmental.ca
 description: Environmental consulting firm dedicated to sustainable solutions.
-baseurl: "" # Leave empty if deploying to username.github.io, or set to "/repo-name" for project pages
-url: "https://yourusername.github.io" # Replace with your GitHub Pages URL
+baseurl: "/tamarack" # Leave empty if deploying to username.github.io, or set to "/repo-name" for project pages
+url: "https://sphericalwave.github.io" # Replace with your GitHub Pages URL
 theme: minima # Default theme (optional, we’ll override with custom CSS)
 plugins:
   - jekyll-feed
