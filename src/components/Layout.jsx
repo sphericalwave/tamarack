@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import tamaSymbol from '../assets/tamaSymbol.webp';
 
 const navStyle = {
   display: 'flex',
@@ -92,7 +93,10 @@ export default function Layout({ children }) {
   return (
     <div style={navStyle}>
       <header style={headerStyle}>
-        <span style={logoStyle}>Tamarack Environmental</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img src={tamaSymbol} alt="" style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover' }} />
+          <span style={logoStyle}>Tamarack Environmental</span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <span style={{ fontSize: '13px', color: '#c6d8c6' }}>
             {currentUser?.name} {currentUser?.role === 'pm' && <span style={{ color: '#8fc08f', fontWeight: 700, fontSize: '11px', marginLeft: 4 }}>PM</span>}

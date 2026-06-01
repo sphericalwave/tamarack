@@ -19,6 +19,10 @@ function useUsers() {
   return [users, save];
 }
 
+function fmt(n) {
+  return '$' + (n || 0).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function ProjectsTab() {
   const [projects, saveProjects] = useProjects();
   const [users] = useUsers();
@@ -26,6 +30,23 @@ function ProjectsTab() {
   const [newPmId, setNewPmId] = useState('');
   const pms = users.filter(u => u.role === 'pm');
   const userMap = Object.fromEntries(users.map(u => [u.id, u.name]));
+  const userObjMap = Object.fromEntries(users.map(u => [u.id, u]));
+
+  const budgets = getItem('tm_phase_budgets') || {};
+  const timeEntries = getItem('tm_time_entries') || [];
+  const expenses = getItem('tm_expenses') || [];
+
+  function financials(p) {
+    const pb = budgets[p.id] || {};
+    const contracted = Object.values(pb).reduce((s, b) => s + (b.fees || 0) + (b.expenses || 0), 0);
+    const spentFees = timeEntries
+      .filter(t => t.projectId === p.id)
+      .reduce((s, t) => s + t.hours * (userObjMap[t.employeeId]?.rate || 0), 0);
+    const spentExp = expenses
+      .filter(e => e.projectId === p.id)
+      .reduce((s, e) => s + e.total, 0);
+    return { contracted, spent: spentFees + spentExp };
+  }
 
   function addProject() {
     const name = newName.trim();
@@ -77,11 +98,16 @@ function ProjectsTab() {
             <th>PM</th>
             <th>Status</th>
             <th>Phases</th>
+            <th>Contracted</th>
+            <th>Spent</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          {projects.map(p => (
+          {projects.map(p => {
+            const { contracted, spent } = financials(p);
+            const over = spent > contracted && contracted > 0;
+            return (
             <tr key={p.id}>
               <td style={{ fontWeight: 600 }}>{p.name}</td>
               <td style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{userMap[p.pmId] || '—'}</td>
@@ -89,6 +115,8 @@ function ProjectsTab() {
                 <span className={`badge badge-${p.status}`}>{p.status}</span>
               </td>
               <td style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{p.phases.length} phase{p.phases.length !== 1 ? 's' : ''}</td>
+              <td style={{ fontWeight: 600 }}>{contracted > 0 ? fmt(contracted) : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}</td>
+              <td style={{ fontWeight: 600, color: over ? '#c0392b' : 'inherit' }}>{spent > 0 ? fmt(spent) : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}</td>
               <td>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <button
@@ -101,7 +129,8 @@ function ProjectsTab() {
                 </div>
               </td>
             </tr>
-          ))}
+          );
+          })}
         </tbody>
       </table>
     </div>

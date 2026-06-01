@@ -300,6 +300,40 @@ export default function ProjectDetail() {
         <p>PM: {userMap[project.pmId]?.name || '—'}</p>
       </div>
 
+      {/* Contracted vs Spent summary */}
+      {(() => {
+        const contracted = totalBudgetFees + totalBudgetExp;
+        const spent = totalSpentFees + totalSpentExp;
+        const variance = contracted - spent;
+        const over = variance < 0;
+        return (
+          <div style={{
+            display: 'flex',
+            gap: '0',
+            marginBottom: '20px',
+            borderRadius: 'var(--radius)',
+            overflow: 'hidden',
+            border: '1px solid var(--color-border)',
+          }}>
+            {[
+              { label: 'Contracted', value: fmt(contracted), color: 'var(--color-nav)', light: '#e8f0dc' },
+              { label: 'Spent', value: fmt(spent), color: over ? '#c0392b' : '#27ae60', light: over ? '#fdf0ee' : '#edf7ed' },
+              { label: 'Variance', value: `${over ? '–' : '+'}${fmt(Math.abs(variance))}`, color: over ? '#c0392b' : '#27ae60', light: over ? '#fdf0ee' : '#edf7ed' },
+            ].map((item, i) => (
+              <div key={i} style={{
+                flex: 1,
+                padding: '14px 20px',
+                background: item.light,
+                borderRight: i < 2 ? '1px solid var(--color-border)' : 'none',
+              }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: '4px' }}>{item.label}</div>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: item.color }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Project details form */}
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-nav)', marginBottom: '16px' }}>

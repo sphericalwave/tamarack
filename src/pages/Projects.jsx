@@ -371,12 +371,55 @@ export default function Projects() {
   const [allBudgets, saveBudgets] = usePhaseBudgets();
   const [allInvoices, saveInvoices] = useInvoices();
 
+  const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+
+  const totals = projects.reduce((acc, p) => {
+    const pb = allBudgets[p.id] || {};
+    acc.contracted += Object.values(pb).reduce((s, b) => s + (b.fees || 0) + (b.expenses || 0), 0);
+    acc.spent += timeEntries
+      .filter(t => t.projectId === p.id)
+      .reduce((s, t) => s + t.hours * (userMap[t.employeeId]?.rate || 0), 0);
+    acc.spent += expenses
+      .filter(e => e.projectId === p.id)
+      .reduce((s, e) => s + e.total, 0);
+    return acc;
+  }, { contracted: 0, spent: 0 });
+  const totalVariance = totals.contracted - totals.spent;
+  const totalOver = totalVariance < 0;
+
   return (
     <div>
       <div className="page-header">
         <h1>Projects</h1>
         <p>Phase budget tracking and invoicing for all projects.</p>
       </div>
+
+      {projects.length > 0 && (
+        <div style={{
+          display: 'flex',
+          gap: '0',
+          marginBottom: '24px',
+          borderRadius: 'var(--radius)',
+          overflow: 'hidden',
+          border: '1px solid var(--color-border)',
+        }}>
+          {[
+            { label: 'Total Contracted', value: fmt(totals.contracted), color: 'var(--color-nav)', light: '#e8f0dc' },
+            { label: 'Total Spent', value: fmt(totals.spent), color: totalOver ? '#c0392b' : '#27ae60', light: totalOver ? '#fdf0ee' : '#edf7ed' },
+            { label: 'Total Variance', value: `${totalOver ? '–' : '+'}${fmt(Math.abs(totalVariance))}`, color: totalOver ? '#c0392b' : '#27ae60', light: totalOver ? '#fdf0ee' : '#edf7ed' },
+          ].map((item, i) => (
+            <div key={i} style={{
+              flex: 1,
+              padding: '14px 20px',
+              background: item.light,
+              borderRight: i < 2 ? '1px solid var(--color-border)' : 'none',
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: '4px' }}>{item.label}</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: item.color }}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {projects.length === 0 ? (
         <div className="empty-state">No projects. Add projects in Admin.</div>

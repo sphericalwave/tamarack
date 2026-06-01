@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import tamaSymbol from '../assets/tamaSymbol.webp';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -35,6 +36,7 @@ export default function Login() {
           padding: '24px',
           textAlign: 'center',
         }}>
+          <img src={tamaSymbol} alt="Tamarack Environmental" style={{ width: '80px', marginBottom: '12px', borderRadius: '6px' }} />
           <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>
             Tamarack Environmental
           </div>
