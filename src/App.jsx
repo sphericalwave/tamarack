@@ -9,6 +9,7 @@ import ExpenseEntry from './pages/ExpenseEntry';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Projects from './pages/Projects';
+import ProjectDetail from './pages/ProjectDetail';
 import { initSeedData } from './data/seed';
 
 initSeedData();
@@ -37,6 +38,9 @@ export default function App() {
           } />
           <Route path="/projects" element={
             <PMRoute><Layout><Projects /></Layout></PMRoute>
+          } />
+          <Route path="/projects/:id" element={
+            <PMRoute><Layout><ProjectDetail /></Layout></PMRoute>
           } />
           <Route path="/admin" element={
             <PMRoute><Layout><Admin /></Layout></PMRoute>

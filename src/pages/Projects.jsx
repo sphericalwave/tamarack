@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getItem, setItem, uid } from '../hooks/useStorage';
 
 function usePhaseBudgets() {
@@ -263,6 +264,13 @@ function ProjectCard({ project, users, timeEntries, expenses, allBudgets, saveBu
           </div>
         </div>
         <span className={`badge badge-${project.status}`}>{project.status}</span>
+        <Link
+          to={`/projects/${project.id}`}
+          onClick={e => e.stopPropagation()}
+          style={{ fontSize: '13px', color: 'var(--color-primary)', fontWeight: 500, textDecoration: 'none', whiteSpace: 'nowrap' }}
+        >
+          Details →
+        </Link>
         <span style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>{expanded ? '▲' : '▼'}</span>
       </div>
 
