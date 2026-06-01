@@ -66,6 +66,11 @@ export const SEED_TIME_ENTRIES = [
   // P2 Guelph EIA — Alex PM (u1)
   { id: 't19', employeeId: 'u1', projectId: 'p2', phase: 'Impact Assessment',        date: '2026-05-31', hours: 3, billingNotes: 'Senior review of impact matrix. Client call re: mitigation options.', createdAt: '2026-05-31T17:00:00Z' },
 
+  // Alex PM (u1) — June 2026 entries
+  { id: 't29', employeeId: 'u1', projectId: 'p1', phase: 'Phase 4 - Final Report',   date: '2026-06-02', hours: 3, billingNotes: 'Client presentation of draft final report. Addressed comments from regulatory reviewer.', createdAt: '2026-06-02T17:00:00Z' },
+  { id: 't30', employeeId: 'u1', projectId: 'p2', phase: 'Mitigation Planning',      date: '2026-06-03', hours: 4, billingNotes: 'Facilitated mitigation workshop with client and engineering team. Drafted mitigation register.', createdAt: '2026-06-03T17:00:00Z' },
+  { id: 't31', employeeId: 'u1', projectId: 'p1', phase: 'Phase 4 - Final Report',   date: '2026-06-04', hours: 2, billingNotes: 'Final review and sign-off of wetland assessment report for client submission.', createdAt: '2026-06-04T17:00:00Z' },
+
   // P3 Northern Pipeline — Aaron (u3)
   { id: 't20', employeeId: 'u3', projectId: 'p3', phase: 'Stakeholder Engagement', date: '2026-03-10', hours: 6, billingNotes: 'Indigenous community consultation meetings in Fort Albany and Kashechewan.', createdAt: '2026-03-10T17:00:00Z' },
   { id: 't21', employeeId: 'u3', projectId: 'p3', phase: 'Field Survey',            date: '2026-04-05', hours: 8, billingNotes: 'Helicopter transect surveys along 120 km corridor. Moose and caribou counts.', createdAt: '2026-04-05T17:00:00Z' },
@@ -108,6 +113,10 @@ export const SEED_EXPENSES = [
   // P3 Northern Pipeline — Katie (u2)
   { id: 'e13', employeeId: 'u2', projectId: 'p3', date: '2026-03-10', amount: 420.00,  tax: 0,     tip: 0, total: 420.00,  vendorNotes: 'AIR CANADA - Return flight YYZ-YMO KM community consultations', province: 'ON', paymentType: 'Corporate Card', createdAt: '2026-03-10T06:00:00Z' },
   { id: 'e14', employeeId: 'u2', projectId: 'p3', date: '2026-03-10', amount: 95.00,   tax: 12.35, tip: 0, total: 107.35,  vendorNotes: 'REVS DINER MOOSONEE - Crew dinner during community engagement', province: 'ON', paymentType: 'Personal Card',  createdAt: '2026-03-10T19:00:00Z' },
+
+  // Alex PM (u1) — expenses June 2026
+  { id: 'e15', employeeId: 'u1', projectId: 'p1', date: '2026-06-02', amount: 0,       tax: 0,     tip: 0, total: 54.00,   vendorNotes: 'Mileage - Guelph to client office and return 200 km', province: 'ON', paymentType: 'Personal Card',  createdAt: '2026-06-02T18:00:00Z' },
+  { id: 'e16', employeeId: 'u1', projectId: 'p2', date: '2026-06-03', amount: 68.00,   tax: 8.84,  tip: 0, total: 76.84,   vendorNotes: 'BOREALIS RESTAURANT - Working lunch with client PM and engineer', province: 'ON', paymentType: 'Corporate Card', createdAt: '2026-06-03T12:30:00Z' },
 ];
 
 export const SEED_PHASE_BUDGETS = {
@@ -140,12 +149,12 @@ export const SEED_INVOICES = [
 ];
 
 export function initSeedData() {
-  if (localStorage.getItem('tm_seeded') !== 'v2') {
+  if (localStorage.getItem('tm_seeded') !== 'v3') {
     localStorage.setItem('tm_users', JSON.stringify(SEED_USERS));
     localStorage.setItem('tm_projects', JSON.stringify(SEED_PROJECTS));
     localStorage.setItem('tm_time_entries', JSON.stringify(SEED_TIME_ENTRIES));
     localStorage.setItem('tm_expenses', JSON.stringify(SEED_EXPENSES));
-    localStorage.setItem('tm_seeded', 'v2');
+    localStorage.setItem('tm_seeded', 'v3');
   }
 
   // Migrations for existing installs
