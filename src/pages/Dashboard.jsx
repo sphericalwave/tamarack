@@ -53,7 +53,7 @@ export default function Dashboard() {
         <p>Your hours and expenses summary.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '28px' }}>
+      <div className="grid-2col">
         <div className="card" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '32px', fontWeight: 700, color: 'var(--color-primary)' }}>{totalHours.toFixed(1)}</div>
           <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px' }}>Total Hours Logged</div>

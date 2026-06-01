@@ -94,7 +94,7 @@ export default function TimeEntry() {
         <p>Log hours against a project and phase.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '460px 1fr', gap: '20px', alignItems: 'start' }}>
+      <div className="grid-form-list">
         <div className="card">
           <form onSubmit={handleSubmit}>
             <div className="form-group">

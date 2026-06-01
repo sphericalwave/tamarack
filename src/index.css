@@ -252,3 +252,97 @@ tr:hover td {
   color: var(--color-text-muted);
   font-size: 14px;
 }
+
+/* Responsive grid utilities */
+.grid-form-list {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+/* Bottom nav (hidden on desktop) */
+.layout-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .layout-sidebar {
+    display: none;
+  }
+
+  .layout-main {
+    padding: 16px !important;
+    max-width: 100% !important;
+  }
+
+  .layout-footer {
+    display: none;
+  }
+
+  .layout-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-nav);
+    border-top: 1px solid #1e3535;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .layout-bottom-nav a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 10px 4px;
+    color: #8aabaa;
+    font-size: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: color 0.15s;
+  }
+
+  .layout-bottom-nav a.active {
+    color: #a8cca8;
+  }
+
+  .layout-bottom-nav a svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* push page content above bottom nav */
+  .layout-main {
+    padding-bottom: 72px !important;
+  }
+
+  .grid-form-list {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header h1 {
+    font-size: 19px;
+  }
+
+  /* Admin add-project row */
+  .admin-add-row {
+    flex-wrap: wrap;
+  }
+}

@@ -98,7 +98,7 @@ export default function ExpenseEntry() {
         <p>Log receipts and reimbursable expenses.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '460px 1fr', gap: '20px', alignItems: 'start' }}>
+      <div className="grid-form-list">
         <div className="card">
           <form onSubmit={handleSubmit}>
             <div className="form-group">
