@@ -127,6 +127,7 @@ export default function Layout({ children }) {
               <div style={{ padding: '16px 20px 10px', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Management
               </div>
+              <SideLink to="/projects">Projects</SideLink>
               <SideLink to="/admin">Admin</SideLink>
             </>
           )}

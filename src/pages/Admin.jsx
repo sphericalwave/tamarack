@@ -21,13 +21,18 @@ function useUsers() {
 
 function ProjectsTab() {
   const [projects, saveProjects] = useProjects();
+  const [users] = useUsers();
   const [newName, setNewName] = useState('');
+  const [newPmId, setNewPmId] = useState('');
+  const pms = users.filter(u => u.role === 'pm');
+  const userMap = Object.fromEntries(users.map(u => [u.id, u.name]));
 
   function addProject() {
     const name = newName.trim();
     if (!name) return;
-    saveProjects([...projects, { id: uid(), name, status: 'active', phases: [] }]);
+    saveProjects([...projects, { id: uid(), name, status: 'active', pmId: newPmId || null, phases: [] }]);
     setNewName('');
+    setNewPmId('');
   }
 
   function toggleStatus(id) {
@@ -52,6 +57,14 @@ function ProjectsTab() {
           style={{ flex: 1, padding: '8px 12px', border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius)', fontFamily: 'inherit', fontSize: '14px' }}
           onKeyDown={e => e.key === 'Enter' && addProject()}
         />
+        <select
+          value={newPmId}
+          onChange={e => setNewPmId(e.target.value)}
+          style={{ padding: '8px 12px', border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius)', fontFamily: 'inherit', fontSize: '14px', background: '#fff' }}
+        >
+          <option value="">— Assign PM —</option>
+          {pms.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
         <button className="btn btn-primary" onClick={addProject}>Add Project</button>
       </div>
 
@@ -61,6 +74,7 @@ function ProjectsTab() {
         <thead>
           <tr>
             <th>Project Name</th>
+            <th>PM</th>
             <th>Status</th>
             <th>Phases</th>
             <th></th>
@@ -70,6 +84,7 @@ function ProjectsTab() {
           {projects.map(p => (
             <tr key={p.id}>
               <td style={{ fontWeight: 600 }}>{p.name}</td>
+              <td style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{userMap[p.pmId] || '—'}</td>
               <td>
                 <span className={`badge badge-${p.status}`}>{p.status}</span>
               </td>
