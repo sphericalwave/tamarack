@@ -115,6 +115,16 @@ const IconProjects = () => (
   </svg>
 );
 
+const IconMerge = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 6H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3" />
+    <path d="M16 6h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3" />
+    <line x1="12" y1="2" x2="12" y2="22" />
+    <polyline points="9 9 12 6 15 9" />
+    <polyline points="9 15 12 18 15 15" />
+  </svg>
+);
+
 const IconAdmin = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
@@ -167,6 +177,7 @@ export default function Layout({ children }) {
           <SideLink to="/time">Time Entry</SideLink>
           <SideLink to="/expenses">Expenses</SideLink>
           <SideLink to="/dashboard">Dashboard</SideLink>
+          <SideLink to="/merge">Merge Sheets</SideLink>
           {currentUser?.role === 'pm' && (
             <>
               <div style={{ padding: '16px 20px 10px', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -190,6 +201,7 @@ export default function Layout({ children }) {
         <BottomNavLink to="/time" label="Time" icon={<IconTime />} />
         <BottomNavLink to="/expenses" label="Expenses" icon={<IconExpense />} />
         <BottomNavLink to="/dashboard" label="Dashboard" icon={<IconDashboard />} />
+        <BottomNavLink to="/merge" label="Merge" icon={<IconMerge />} />
         {currentUser?.role === 'pm' && (
           <>
             <BottomNavLink to="/projects" label="Projects" icon={<IconProjects />} />

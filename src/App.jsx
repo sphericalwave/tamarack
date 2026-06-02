@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
+import MergeSheets from './pages/MergeSheets';
 import { initSeedData } from './data/seed';
 
 initSeedData();
@@ -35,6 +36,9 @@ export default function App() {
           } />
           <Route path="/dashboard" element={
             <ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>
+          } />
+          <Route path="/merge" element={
+            <ProtectedRoute><Layout><MergeSheets /></Layout></ProtectedRoute>
           } />
           <Route path="/projects" element={
             <PMRoute><Layout><Projects /></Layout></PMRoute>
