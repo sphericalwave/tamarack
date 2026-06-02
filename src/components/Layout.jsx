@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import tamaSymbol from '../assets/tamaSymbol.webp';
+import tamaSymbol from '../assets/tamaTree.jpeg';
 
 const navStyle = {
   display: 'flex',
