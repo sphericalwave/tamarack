@@ -267,7 +267,8 @@ export default function MergeSheets() {
         applyDateFormat(ws);
         if (name === 'Hours') applyHoursFormat(ws, headers);
         if (name === 'Expenses') applyCurrencyFormat(ws, headers);
-        const emptyHighlight = name === 'Hours' ? ['Project', 'Phase'] : name === 'Expenses' ? ['Project'] : [];
+        const emptyHighlight = name === 'Hours' ? ['Project', 'Phase']
+          : name === 'Expenses' ? ['Project', 'Expense Amount', 'Total', 'Tax Rate'] : [];
         applyStyles(ws, name === 'Hours' || name === 'Expenses', emptyHighlight);
       }
       XLSX.utils.book_append_sheet(wb, ws, name);
