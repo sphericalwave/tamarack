@@ -102,15 +102,34 @@ function applyCurrencyFormat(ws, headers) {
   }
 }
 
-// Red font on Seq column cells (skip header row)
-function applySeqStyle(ws) {
+const HEADER_FILL  = { patternType: 'solid', fgColor: { rgb: '556B2F' } };
+const HEADER_FONT  = { color: { rgb: 'FFFFFF' }, bold: true };
+const CELL_BORDER  = {
+  top:    { style: 'thin', color: { rgb: 'C6C6C6' } },
+  bottom: { style: 'thin', color: { rgb: 'C6C6C6' } },
+  left:   { style: 'thin', color: { rgb: 'C6C6C6' } },
+  right:  { style: 'thin', color: { rgb: 'C6C6C6' } },
+};
+
+// Borders on all cells, green header, red Seq, autofilter
+function applyStyles(ws, hasSeq) {
   if (!ws['!ref']) return;
   const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let R = range.s.r + 1; R <= range.e.r; R++) {
-    const ref = XLSX.utils.encode_cell({ r: R, c: 0 });
-    const cell = ws[ref];
-    if (cell) cell.s = { font: { color: { rgb: 'FF0000' } } };
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const ref = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[ref];
+      if (!cell) continue;
+      if (R === range.s.r) {
+        cell.s = { fill: HEADER_FILL, font: HEADER_FONT, border: CELL_BORDER };
+      } else if (hasSeq && C === 0) {
+        cell.s = { font: { color: { rgb: 'FF0000' } }, border: CELL_BORDER };
+      } else {
+        cell.s = { border: CELL_BORDER };
+      }
+    }
   }
+  ws['!autofilter'] = { ref: ws['!ref'] };
 }
 
 function cellDisplay(col, val) {
@@ -215,7 +234,7 @@ export default function MergeSheets() {
         ws['!cols'] = colWidths(rows);
         applyDateFormat(ws);
         if (name === 'Expenses') applyCurrencyFormat(ws, headers);
-        if (name === 'Hours' || name === 'Expenses') applySeqStyle(ws);
+        applyStyles(ws, name === 'Hours' || name === 'Expenses');
       }
       XLSX.utils.book_append_sheet(wb, ws, name);
     }
