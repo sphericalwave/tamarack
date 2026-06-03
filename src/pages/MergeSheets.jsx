@@ -236,9 +236,11 @@ export default function MergeSheets() {
     { Hours: [], Expenses: [], Projects: [], Employees: [] }
   );
 
+  const byEmployee = rows => [...rows].sort((a, b) => a.Employee.localeCompare(b.Employee));
+
   const merged = {
-    Hours:     withSeq(raw.Hours,    timeSeqStart),
-    Expenses:  withSeq(raw.Expenses, expSeqStart),
+    Hours:     withSeq(byEmployee(raw.Hours),    timeSeqStart),
+    Expenses:  withSeq(byEmployee(raw.Expenses), expSeqStart),
     Projects:  dedup(raw.Projects,  r => r['PROJECT']),
     Employees: dedup(raw.Employees, r => r['Employee']),
   };
