@@ -117,10 +117,10 @@ function applyCurrencyFormat(ws, headers) {
 const HEADER_FILL  = { patternType: 'solid', fgColor: { rgb: '556B2F' } };
 const HEADER_FONT  = { color: { rgb: 'FFFFFF' }, bold: true };
 const CELL_BORDER  = {
-  top:    { style: 'thin', color: { rgb: 'C6C6C6' } },
-  bottom: { style: 'thin', color: { rgb: 'C6C6C6' } },
-  left:   { style: 'thin', color: { rgb: 'C6C6C6' } },
-  right:  { style: 'thin', color: { rgb: 'C6C6C6' } },
+  top:    { style: 'thin', color: { rgb: '000000' } },
+  bottom: { style: 'thin', color: { rgb: '000000' } },
+  left:   { style: 'thin', color: { rgb: '000000' } },
+  right:  { style: 'thin', color: { rgb: '000000' } },
 };
 
 const EMPTY_FILL = { patternType: 'solid', fgColor: { rgb: 'FF4D4D' } }; // red @ 0.7 opacity over white
