@@ -1,21 +1,24 @@
 import { useState, useRef } from 'react';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 
 const SHEET_NAMES = ['Hours', 'Expenses', 'Projects', 'Employees'];
+const CURRENCY_COLS = new Set(['Expense Amount', 'Tax', 'Tip', 'Total']);
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// Excel date serial → YYYY-MM-DD
+// Excel date serial → JS Date object (UTC)
 function excelDate(serial) {
-  if (typeof serial !== 'number' || serial < 40000) return '';
-  const d = new Date((serial - 25569) * 86400000);
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  if (typeof serial !== 'number' || serial < 40000) return null;
+  return new Date((serial - 25569) * 86400000);
+}
+
+// Format Date for display: 30-Apr-26
+function fmtDate(d) {
+  if (!(d instanceof Date)) return '';
+  return `${String(d.getUTCDate()).padStart(2, '0')}-${MONTHS[d.getUTCMonth()]}-${String(d.getUTCFullYear()).slice(-2)}`;
 }
 
 function str(v) { return String(v ?? '').trim(); }
 
-// Hours: multiline column names, tons of __EMPTY_* formula columns, blanks at bottom
 function parseHours(ws) {
   const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
   if (!raw.length) return [];
@@ -33,23 +36,20 @@ function parseHours(ws) {
       const emp = r[empKey];
       const hrs = r[hoursKey];
       const dt  = r[dateKey];
-      // Valid row: short employee code (initials, no newlines), numeric date serial, positive hours
       return typeof emp === 'string' && emp.trim() && !emp.includes('\n') && emp.length <= 12 &&
              typeof dt  === 'number' && dt  > 40000 &&
              typeof hrs === 'number' && hrs  > 0;
     })
     .map(r => ({
-      Employee:       str(r[empKey]),
-      Project:        str(r[projKey]),
-      Phase:          str(r[phaseKey]),
-      Date:           excelDate(r[dateKey]),
-      Hours:          r[hoursKey],
+      Employee:        str(r[empKey]),
+      Project:         str(r[projKey]),
+      Phase:           str(r[phaseKey]),
+      Date:            excelDate(r[dateKey]),
+      Hours:           r[hoursKey],
       'Billing Notes': str(r[notesKey]),
     }));
 }
 
-// Expenses: rows 0-1 are instruction/header rows; real data at row 2+; all columns __EMPTY_*
-// Col layout: 0=Staff, 1=Project, 2=Date, 3=Amount, 4=Tax, 5=Tip, 6=Total, 7=Notes, 8=Province, 9=Payment
 function parseExpenses(ws) {
   const arrays = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
   return arrays.slice(2)
@@ -59,29 +59,26 @@ function parseExpenses(ws) {
              !emp.includes('Staff') && !emp.includes('INSTRUCTIONS');
     })
     .map(r => ({
-      Employee:         str(r[0]),
-      Project:          str(r[1]),
-      Date:             excelDate(typeof r[2] === 'number' ? r[2] : null),
-      'Expense Amount': typeof r[3] === 'number' ? r[3] : '',
-      Tax:              typeof r[4] === 'number' ? r[4] : '',
-      Tip:              typeof r[5] === 'number' ? r[5] : '',
-      Total:            typeof r[6] === 'number' ? r[6] : '',
+      Employee:          str(r[0]),
+      Project:           str(r[1]),
+      Date:              excelDate(typeof r[2] === 'number' ? r[2] : null),
+      'Expense Amount':  typeof r[3] === 'number' ? r[3] : '',
+      Tax:               typeof r[4] === 'number' ? r[4] : '',
+      Tip:               typeof r[5] === 'number' ? r[5] : '',
+      Total:             typeof r[6] === 'number' ? r[6] : '',
       'Vendor and Notes': str(r[7]),
-      'Tax Rate':       str(r[8]),
-      'Payment Type':   str(r[9]),
+      'Tax Rate':        str(r[8]),
+      'Payment Type':    str(r[9]),
     }))
     .filter(r => r.Employee !== '' && r.Total !== '' && r.Total > 0);
 }
 
-// Projects: Sheet1 has clean column headers (PROJECT, Phase, Phase_1, ...)
-// Deduplicate by project name across files
 function parseProjects(wb) {
   const ws = wb.Sheets['Sheet1'];
   if (!ws) return [];
   return XLSX.utils.sheet_to_json(ws, { defval: '' });
 }
 
-// Employees: just the Employee column, deduplicate
 function parseEmployees(ws) {
   if (!ws) return [];
   const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
@@ -112,12 +109,10 @@ async function parseWorkbook(file) {
   });
 }
 
-// Add Seq column as first key
-function withSeq(rows) {
-  return rows.map((r, i) => ({ Seq: i + 1, ...r }));
+function withSeq(rows, start = 1) {
+  return rows.map((r, i) => ({ Seq: i + start, ...r }));
 }
 
-// Deduplicate rows for Projects and Employees (same data in every file)
 function dedup(rows, keyFn) {
   const seen = new Set();
   return rows.filter(r => {
@@ -126,6 +121,65 @@ function dedup(rows, keyFn) {
     seen.add(k);
     return true;
   });
+}
+
+function colWidths(rows) {
+  if (!rows.length) return [];
+  const cols = Object.keys(rows[0]);
+  return cols.map(col => {
+    const maxLen = Math.max(
+      col.length,
+      ...rows.map(r => {
+        const v = r[col];
+        if (v instanceof Date) return 9; // dd-mmm-yy
+        return String(v ?? '').length;
+      })
+    );
+    return { wch: Math.min(maxLen + 2, 50) };
+  });
+}
+
+function applyDateFormat(ws) {
+  if (!ws['!ref']) return;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const ref = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[ref];
+      if (cell && cell.t === 'd') cell.z = 'dd-mmm-yy';
+    }
+  }
+}
+
+function applyCurrencyFormat(ws, headers) {
+  if (!ws['!ref']) return;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const currCols = headers.reduce((acc, h, i) => { if (CURRENCY_COLS.has(h)) acc.push(i); return acc; }, []);
+  for (let R = range.s.r + 1; R <= range.e.r; R++) {
+    for (const C of currCols) {
+      const ref = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[ref];
+      if (cell && cell.t === 'n') cell.z = '$#,##0.00';
+    }
+  }
+}
+
+// Red font on Seq column cells (skip header row)
+function applySeqStyle(ws) {
+  if (!ws['!ref']) return;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r + 1; R <= range.e.r; R++) {
+    const ref = XLSX.utils.encode_cell({ r: R, c: 0 });
+    const cell = ws[ref];
+    if (cell) cell.s = { font: { color: { rgb: 'FF0000' } } };
+  }
+}
+
+function cellDisplay(col, val) {
+  if (val instanceof Date) return fmtDate(val);
+  if (CURRENCY_COLS.has(col) && typeof val === 'number')
+    return val.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
+  return String(val ?? '');
 }
 
 function PreviewTable({ rows }) {
@@ -144,9 +198,17 @@ function PreviewTable({ rows }) {
         <tbody>
           {rows.map((row, i) => (
             <tr key={i} style={{ borderBottom: '1px solid var(--color-border)', background: i % 2 === 0 ? '#fff' : 'var(--color-surface)' }}>
-              {cols.map(c => (
-                <td key={c} style={{ padding: '7px 12px', whiteSpace: 'nowrap', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {String(row[c] ?? '')}
+              {cols.map((c, ci) => (
+                <td key={c} style={{
+                  padding: '7px 12px',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '280px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  color: ci === 0 && c === 'Seq' ? '#cc0000' : undefined,
+                  fontWeight: ci === 0 && c === 'Seq' ? 600 : undefined,
+                }}>
+                  {cellDisplay(c, row[c])}
                 </td>
               ))}
             </tr>
@@ -158,10 +220,12 @@ function PreviewTable({ rows }) {
 }
 
 export default function MergeSheets() {
-  const [files, setFiles]       = useState([]);
+  const [files, setFiles]         = useState([]);
   const [activeTab, setActiveTab] = useState('Hours');
-  const [dragging, setDragging] = useState(false);
-  const [errors, setErrors]     = useState([]);
+  const [dragging, setDragging]   = useState(false);
+  const [errors, setErrors]       = useState([]);
+  const [timeSeqStart, setTimeSeqStart] = useState(1);
+  const [expSeqStart,  setExpSeqStart]  = useState(1);
   const inputRef = useRef();
 
   const raw = files.reduce(
@@ -173,8 +237,8 @@ export default function MergeSheets() {
   );
 
   const merged = {
-    Hours:     withSeq(raw.Hours),
-    Expenses:  withSeq(raw.Expenses),
+    Hours:     withSeq(raw.Hours,    timeSeqStart),
+    Expenses:  withSeq(raw.Expenses, expSeqStart),
     Projects:  dedup(raw.Projects,  r => r['PROJECT']),
     Employees: dedup(raw.Employees, r => r['Employee']),
   };
@@ -203,7 +267,16 @@ export default function MergeSheets() {
     const wb = XLSX.utils.book_new();
     for (const name of SHEET_NAMES) {
       const rows = merged[name];
-      const ws = rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([[]]);
+      const ws = rows.length
+        ? XLSX.utils.json_to_sheet(rows)
+        : XLSX.utils.aoa_to_sheet([[]]);
+      if (rows.length) {
+        const headers = Object.keys(rows[0]);
+        ws['!cols'] = colWidths(rows);
+        applyDateFormat(ws);
+        if (name === 'Expenses') applyCurrencyFormat(ws, headers);
+        if (name === 'Hours' || name === 'Expenses') applySeqStyle(ws);
+      }
       XLSX.utils.book_append_sheet(wb, ws, name);
     }
     XLSX.writeFile(wb, 'master-timesheet.xlsx');
@@ -214,6 +287,19 @@ export default function MergeSheets() {
     setDragging(false);
     handleFiles(e.dataTransfer.files);
   }
+
+  const seqInput = (label, val, set) => (
+    <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
+      <input
+        type="number"
+        min="1"
+        value={val}
+        onChange={e => set(Math.max(1, parseInt(e.target.value) || 1))}
+        style={{ width: '64px', padding: '4px 6px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', fontSize: '13px' }}
+      />
+    </label>
+  );
 
   return (
     <div>
@@ -295,7 +381,7 @@ export default function MergeSheets() {
       {files.length > 0 && (
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', gap: '4px' }}>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
               {SHEET_NAMES.map(name => (
                 <button
                   key={name}
@@ -306,7 +392,11 @@ export default function MergeSheets() {
                 </button>
               ))}
             </div>
-            <button className="btn btn-primary" onClick={download}>↓ Download Master Sheet</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              {seqInput('Time Seq #', timeSeqStart, setTimeSeqStart)}
+              {seqInput('Expense Seq #', expSeqStart, setExpSeqStart)}
+              <button className="btn btn-primary" onClick={download}>↓ Download Master Sheet</button>
+            </div>
           </div>
           <PreviewTable rows={merged[activeTab]} />
         </div>
