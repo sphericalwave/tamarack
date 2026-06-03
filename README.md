@@ -1,16 +1,62 @@
-# React + Vite
+# Tamarack Environmental — Time & Expense Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Internal web app for tracking time entries and expenses across projects, with a tool to merge individual employee Excel workbooks into a single master sheet.
 
-Currently, two official plugins are available:
+## Getting started
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+App runs at `http://localhost:5173/tamarack/` (port may increment if already in use).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Demo accounts (password: `password`):
 
-## Expanding the ESLint configuration
+| Role | Email |
+|------|-------|
+| PM | pm@tamarack.ca |
+| Staff | km@tamarack.ca · ab@tamarack.ca · sr@tamarack.ca |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Features
+
+- **Time Entry** — log hours against project phases with billing notes
+- **Expenses** — record expenses with tax, tip, and payment type
+- **Dashboard** — summary of hours and spend by project
+- **Projects / Admin** — manage projects, phases, and employees
+- **Merge Sheets** — upload employee `.xlsx` workbooks and download a merged master file
+
+## Merge Sheets
+
+Drop one or more employee workbooks onto the Merge Sheets page. Each workbook must contain sheets named `Hours`, `Expenses`, `Projects`, and `Employees`.
+
+The downloaded `master-timesheet.xlsx` includes:
+
+- Dates formatted `dd-mmm-yy` as proper Excel date cells
+- Currency formatting on Expense Amount, Tax, Tip, and Total columns
+- Seq column in red, with configurable start numbers for Time and Expense sequences
+- Columns auto-sized to content
+- Hours and Expenses sorted alphabetically by employee
+
+## Tests
+
+Tests cover merge completeness — verifying no rows are silently dropped when parsing employee workbooks.
+
+```bash
+npm test
+```
+
+Tests read the `.xlsx` files in `timesheet/` and assert:
+
+- Every file yields at least one hours row
+- Merged row count equals the sum of per-file counts (hours and expenses)
+- No parsed row is missing required fields (Employee, Date, Hours / Total)
+
+To run tests against a different set of workbooks, drop `.xlsx` files into `timesheet/` and re-run.
+
+## Build & deploy
+
+```bash
+npm run build     # production build → dist/
+npm run deploy    # build + push to GitHub Pages
+```
