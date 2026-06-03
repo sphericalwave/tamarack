@@ -346,7 +346,7 @@ export default function MergeSheets() {
             <thead>
               <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
                 <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--color-text-muted)', fontWeight: 600 }}>File</th>
-                {SHEET_NAMES.map(n => (
+                {['Hours', 'Expenses'].map(n => (
                   <th key={n} style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--color-text-muted)', fontWeight: 600 }}>{n}</th>
                 ))}
                 <th style={{ width: '40px' }} />
@@ -356,7 +356,7 @@ export default function MergeSheets() {
               {files.map(f => (
                 <tr key={f.name} style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '7px 8px', fontFamily: 'monospace', fontSize: '12px' }}>{f.name}</td>
-                  {SHEET_NAMES.map(n => (
+                  {['Hours', 'Expenses'].map(n => (
                     <td key={n} style={{ padding: '7px 8px', textAlign: 'right', color: f.rows[n].length ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
                       {f.rows[n].length}
                     </td>
