@@ -123,21 +123,41 @@ const CELL_BORDER  = {
   right:  { style: 'thin', color: { rgb: 'C6C6C6' } },
 };
 
-// Borders on all cells, green header, red Seq, autofilter
-function applyStyles(ws, hasSeq) {
+const EMPTY_FILL = { patternType: 'solid', fgColor: { rgb: 'FF4D4D' } }; // red @ 0.7 opacity over white
+
+// Borders on all cells, green header, red Seq, red-highlight empty cols, autofilter
+function applyStyles(ws, hasSeq, emptyHighlight = []) {
   if (!ws['!ref']) return;
   const range = XLSX.utils.decode_range(ws['!ref']);
+
+  // Map header names → column indices
+  const headerToCol = {};
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: range.s.r, c: C })];
+    if (cell?.v != null) headerToCol[String(cell.v)] = C;
+  }
+  const emptyCols = new Set(emptyHighlight.map(h => headerToCol[h]).filter(i => i !== undefined));
+
   for (let R = range.s.r; R <= range.e.r; R++) {
     for (let C = range.s.c; C <= range.e.c; C++) {
       const ref = XLSX.utils.encode_cell({ r: R, c: C });
-      const cell = ws[ref];
-      if (!cell) continue;
       if (R === range.s.r) {
-        cell.s = { fill: HEADER_FILL, font: HEADER_FONT, border: CELL_BORDER };
-      } else if (hasSeq && C === 0) {
-        cell.s = { font: { color: { rgb: 'FF0000' } }, border: CELL_BORDER };
+        const cell = ws[ref];
+        if (cell) cell.s = { fill: HEADER_FILL, font: HEADER_FONT, border: CELL_BORDER };
+      } else if (emptyCols.has(C)) {
+        const cell = ws[ref];
+        const isEmpty = !cell || cell.v == null || String(cell.v).trim() === '';
+        if (isEmpty) {
+          ws[ref] = { ...(cell ?? { t: 's', v: '' }), s: { fill: EMPTY_FILL, border: CELL_BORDER } };
+        } else {
+          cell.s = { border: CELL_BORDER };
+        }
       } else {
-        cell.s = { border: CELL_BORDER };
+        const cell = ws[ref];
+        if (!cell) continue;
+        cell.s = hasSeq && C === 0
+          ? { font: { color: { rgb: 'FF0000' } }, border: CELL_BORDER }
+          : { border: CELL_BORDER };
       }
     }
   }
@@ -247,7 +267,8 @@ export default function MergeSheets() {
         applyDateFormat(ws);
         if (name === 'Hours') applyHoursFormat(ws, headers);
         if (name === 'Expenses') applyCurrencyFormat(ws, headers);
-        applyStyles(ws, name === 'Hours' || name === 'Expenses');
+        const emptyHighlight = name === 'Hours' ? ['Project', 'Phase'] : [];
+        applyStyles(ws, name === 'Hours' || name === 'Expenses', emptyHighlight);
       }
       XLSX.utils.book_append_sheet(wb, ws, name);
     }
