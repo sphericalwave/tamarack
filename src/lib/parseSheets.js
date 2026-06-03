@@ -33,7 +33,7 @@ export function parseHours(ws) {
       Project:         str(r[projKey]),
       Phase:           str(r[phaseKey]),
       Date:            excelDate(r[dateKey]),
-      Hours:           Math.round(r[hoursKey] * 10) / 10,
+      Hours:           r[hoursKey],
       'Billing Notes': str(r[notesKey]),
     }));
 }

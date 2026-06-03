@@ -89,6 +89,18 @@ function applyDateFormat(ws) {
   }
 }
 
+function applyHoursFormat(ws, headers) {
+  if (!ws['!ref']) return;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const C = headers.indexOf('Hours');
+  if (C === -1) return;
+  for (let R = range.s.r + 1; R <= range.e.r; R++) {
+    const ref = XLSX.utils.encode_cell({ r: R, c: C });
+    const cell = ws[ref];
+    if (cell && cell.t === 'n') cell.z = '0.0';
+  }
+}
+
 function applyCurrencyFormat(ws, headers) {
   if (!ws['!ref']) return;
   const range = XLSX.utils.decode_range(ws['!ref']);
@@ -233,6 +245,7 @@ export default function MergeSheets() {
         const headers = Object.keys(rows[0]);
         ws['!cols'] = colWidths(rows);
         applyDateFormat(ws);
+        if (name === 'Hours') applyHoursFormat(ws, headers);
         if (name === 'Expenses') applyCurrencyFormat(ws, headers);
         applyStyles(ws, name === 'Hours' || name === 'Expenses');
       }
