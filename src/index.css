@@ -22,10 +22,10 @@
 }
 
 body {
-  font-family: 'Raleway', sans-serif;
+  font-family: 'Calibri', 'Calibri Body', sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
-  font-size: 15px;
+  font-size: 11pt;
   line-height: 1.5;
 }
 
