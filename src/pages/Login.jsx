@@ -85,6 +85,10 @@ export default function Login() {
             Sign In
           </button>
 
+          <div style={{ marginTop: '16px', padding: '12px', background: '#f0f4ed', borderRadius: 'var(--radius)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+            Use your Tamarack email address. Contact Aaron if you need access.
+          </div>
+
         </form>
       </div>
     </div>
