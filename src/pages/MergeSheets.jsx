@@ -6,9 +6,15 @@ const SHEET_NAMES = ['Hours', 'Expenses', 'Projects', 'Employees'];
 const CURRENCY_COLS = new Set(['Expense Amount', 'Tax', 'Tip', 'Total']);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function fmtDate(d) {
-  if (!(d instanceof Date)) return '';
-  return `${d.getUTCDate()}-${MONTHS[d.getUTCMonth()]}-${String(d.getUTCFullYear()).slice(-2)}`;
+const DATE_RE = /^\d{1,2}-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{2}$/;
+
+function fmtDate(s) { return typeof s === 'string' ? s : ''; }
+
+function isDateStr(v) { return typeof v === 'string' && DATE_RE.test(v); }
+
+function dateStrToSerial(s) {
+  const [d, m, y] = s.split('-');
+  return Date.UTC(2000 + parseInt(y), MONTHS.indexOf(m), parseInt(d)) / 86400000 + 25569;
 }
 
 function parseProjects(wb) {
@@ -69,7 +75,7 @@ function colWidths(rows) {
       col.length,
       ...rows.map(r => {
         const v = r[col];
-        if (v instanceof Date) return 9; // dd-mmm-yy
+        if (isDateStr(v)) return 9; // dd-mmm-yy
         return String(v ?? '').length;
       })
     );
@@ -89,22 +95,11 @@ function applyDateFormat(ws) {
     for (const C of dateCols) {
       const ref = XLSX.utils.encode_cell({ r: R, c: C });
       const cell = ws[ref];
-      if (cell) cell.z = 15;
+      if (cell) cell.z = 'DD-MMM-YY';
     }
   }
 }
 
-function applyHoursFormat(ws, headers) {
-  if (!ws['!ref']) return;
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  const C = headers.indexOf('Hours');
-  if (C === -1) return;
-  for (let R = range.s.r + 1; R <= range.e.r; R++) {
-    const ref = XLSX.utils.encode_cell({ r: R, c: C });
-    const cell = ws[ref];
-    if (cell && cell.t === 'n') cell.z = '0.0';
-  }
-}
 
 function applyCurrencyFormat(ws, headers) {
   if (!ws['!ref']) return;
@@ -170,7 +165,7 @@ function applyStyles(ws, hasSeq, emptyHighlight = []) {
 }
 
 function cellDisplay(col, val) {
-  if (val instanceof Date) return fmtDate(val);
+  if (isDateStr(val)) return fmtDate(val);
   if (CURRENCY_COLS.has(col) && typeof val === 'number')
     return val.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' });
   return String(val ?? '');
@@ -265,9 +260,7 @@ export default function MergeSheets() {
       const serialized = merged[name].map(r => {
         const out = {};
         for (const [k, v] of Object.entries(r))
-          out[k] = v instanceof Date
-            ? Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()) / 86400000 + 25569
-            : v;
+          out[k] = isDateStr(v) ? dateStrToSerial(v) : v;
         return out;
       });
       const rows = merged[name];
@@ -278,7 +271,7 @@ export default function MergeSheets() {
         const headers = Object.keys(rows[0]);
         ws['!cols'] = colWidths(rows);
         applyDateFormat(ws);
-        if (name === 'Hours') applyHoursFormat(ws, headers);
+
         if (name === 'Expenses') applyCurrencyFormat(ws, headers);
         const emptyHighlight = name === 'Hours' ? ['Project', 'Phase']
           : name === 'Expenses' ? ['Project', 'Expense Amount', 'Total', 'Tax Rate'] : [];
