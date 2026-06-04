@@ -290,7 +290,6 @@ export default function MergeSheets() {
     const projectByName  = Object.fromEntries(projects.map(p => [p.name.trim(), p.id]));
 
     const unmatchedProj = new Set();
-    const now = new Date().toISOString();
 
     const timeEntries = merged.Hours
       .filter(r => r.Employee && r.Project && r.Date && r.Hours)
