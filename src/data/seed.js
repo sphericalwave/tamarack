@@ -8,7 +8,9 @@ function proj(id, name, status, phases) {
   return { id, name: name.trim(), client: client(name.trim()), status, pmId: 'u1', phases: phases.map(p => p.trim()).filter(Boolean) };
 }
 
-export const SEED_USERS = [];
+export const SEED_USERS = [
+  { id: 'u-tu', name: 'Test User', initials: 'TU', email: 'tu@tamarack.ca', password: 'password', role: 'pm', rate: 0 },
+];
 
 export const SEED_PROJECTS = [
   proj('p1',  'ADMIN', 'active', ['BD','Financials','Other','Vacation (PTO)','Statutory Holiday','Overhead']),
@@ -103,13 +105,13 @@ export const SEED_INVOICES = [
 ];
 
 export function initSeedData() {
-  if (localStorage.getItem('tm_seeded') !== 'v5') {
+  if (localStorage.getItem('tm_seeded') !== 'v6') {
     localStorage.setItem('tm_users',        JSON.stringify(SEED_USERS));
     localStorage.setItem('tm_projects',     JSON.stringify(SEED_PROJECTS));
     localStorage.setItem('tm_time_entries', JSON.stringify(SEED_TIME_ENTRIES));
     localStorage.setItem('tm_expenses',     JSON.stringify(SEED_EXPENSES));
     localStorage.setItem('tm_phase_budgets',JSON.stringify(SEED_PHASE_BUDGETS));
     localStorage.setItem('tm_invoices',     JSON.stringify(SEED_INVOICES));
-    localStorage.setItem('tm_seeded',       'v5');
+    localStorage.setItem('tm_seeded',       'v6');
   }
 }
