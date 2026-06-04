@@ -478,6 +478,103 @@ export default function ProjectDetail() {
         )}
       </div>
 
+      {/* Time Entries */}
+      {(() => {
+        const entries = timeEntries
+          .filter(t => t.projectId === id)
+          .sort((a, b) => b.date.localeCompare(a.date));
+        const totalHours = Math.round(entries.reduce((s, t) => s + t.hours, 0) * 100) / 100;
+        return (
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-nav)', marginBottom: '16px' }}>
+              Time Entries
+              {entries.length > 0 && (
+                <span style={{ fontWeight: 400, fontSize: '13px', color: 'var(--color-text-muted)', marginLeft: '8px' }}>
+                  — {totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}h total across {entries.length} entr{entries.length === 1 ? 'y' : 'ies'}
+                </span>
+              )}
+            </div>
+            {entries.length === 0 ? (
+              <div className="empty-state">No time entries for this project.</div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table>
+                  <thead>
+                    <tr><th>Date</th><th>Employee</th><th>Phase</th><th>Hours</th><th>Billing Notes</th></tr>
+                  </thead>
+                  <tbody>
+                    {entries.map(t => (
+                      <tr key={t.id}>
+                        <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(t.date)}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{userMap[t.employeeId]?.name || t.employeeId}</td>
+                        <td>{t.phase || '—'}</td>
+                        <td style={{ fontWeight: 600 }}>{t.hours % 1 === 0 ? t.hours : t.hours.toFixed(1)}</td>
+                        <td style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{t.billingNotes || '—'}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: 700, background: 'var(--color-surface)', borderTop: '2px solid var(--color-border)' }}>
+                      <td colSpan={3}>Total</td>
+                      <td>{totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}h</td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Expenses */}
+      {(() => {
+        const rows = expenses
+          .filter(e => e.projectId === id)
+          .sort((a, b) => b.date.localeCompare(a.date));
+        const totalExp = rows.reduce((s, e) => s + e.total, 0);
+        return (
+          <div className="card" style={{ marginBottom: '20px' }}>
+            <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-nav)', marginBottom: '16px' }}>
+              Expenses
+              {rows.length > 0 && (
+                <span style={{ fontWeight: 400, fontSize: '13px', color: 'var(--color-text-muted)', marginLeft: '8px' }}>
+                  — {fmt(totalExp)} total across {rows.length} entr{rows.length === 1 ? 'y' : 'ies'}
+                </span>
+              )}
+            </div>
+            {rows.length === 0 ? (
+              <div className="empty-state">No expenses for this project.</div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table>
+                  <thead>
+                    <tr><th>Date</th><th>Employee</th><th>Vendor / Notes</th><th>Amount</th><th>Tax</th><th>Tip</th><th>Total</th><th>Payment</th></tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(e => (
+                      <tr key={e.id}>
+                        <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(e.date)}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{userMap[e.employeeId]?.name || e.employeeId}</td>
+                        <td style={{ fontSize: '13px' }}>{e.vendorNotes || '—'}</td>
+                        <td>{fmt(e.amount)}</td>
+                        <td>{e.tax ? fmt(e.tax) : '—'}</td>
+                        <td>{e.tip ? fmt(e.tip) : '—'}</td>
+                        <td style={{ fontWeight: 700 }}>{fmt(e.total)}</td>
+                        <td style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{e.paymentType || '—'}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: 700, background: 'var(--color-surface)', borderTop: '2px solid var(--color-border)' }}>
+                      <td colSpan={6}>Total</td>
+                      <td>{fmt(totalExp)}</td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Invoices */}
       <InvoicesSection
         project={project}
