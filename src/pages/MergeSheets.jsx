@@ -270,13 +270,25 @@ export default function MergeSheets() {
   }
 
   function updateAppData() {
-    const users    = getItem('tm_users')    || [];
-    const projects = getItem('tm_projects') || [];
+    const now = new Date().toISOString();
 
-    const userByInitials = Object.fromEntries(users.map(u => [initials(u.name), u.id]));
+    // Sync users: create a record for every initials found in Hours not already in tm_users
+    const existingUsers = getItem('tm_users') || [];
+    const userKeyOf = u => u.initials || initials(u.name);
+    const existingKeys = new Set(existingUsers.map(userKeyOf));
+    const allInitialsInSheet = [...new Set(
+      merged.Hours.map(r => r.Employee?.trim()).filter(Boolean)
+    )];
+    const createdUsers = allInitialsInSheet
+      .filter(emp => !existingKeys.has(emp))
+      .map(emp => ({ id: uid(), name: emp, initials: emp, email: `${emp.toLowerCase()}@tamarack.ca`, role: 'employee', rate: 0, password: 'password' }));
+    const users = [...existingUsers, ...createdUsers];
+    if (createdUsers.length) setItem('tm_users', users);
+
+    const projects = getItem('tm_projects') || [];
+    const userByInitials = Object.fromEntries(users.map(u => [userKeyOf(u), u.id]));
     const projectByName  = Object.fromEntries(projects.map(p => [p.name.trim(), p.id]));
 
-    const unmatchedEmp  = new Set();
     const unmatchedProj = new Set();
     const now = new Date().toISOString();
 
@@ -285,7 +297,6 @@ export default function MergeSheets() {
       .map(r => {
         const empId  = userByInitials[r.Employee.trim()];
         const projId = projectByName[r.Project.trim()];
-        if (!empId)  unmatchedEmp.add(r.Employee.trim());
         if (!projId) unmatchedProj.add(r.Project.trim());
         if (!empId || !projId) return null;
         return { id: uid(), employeeId: empId, projectId: projId, phase: r.Phase || '', date: excelDateToISO(r.Date), hours: r.Hours, billingNotes: r['Billing Notes'] || '', createdAt: now };
@@ -297,7 +308,6 @@ export default function MergeSheets() {
       .map(r => {
         const empId  = userByInitials[r.Employee.trim()];
         const projId = projectByName[r.Project.trim()];
-        if (!empId)  unmatchedEmp.add(r.Employee.trim());
         if (!projId) unmatchedProj.add(r.Project.trim());
         if (!empId || !projId) return null;
         const province = (r['Tax Rate'] || '').split(' - ')[0].trim();
@@ -308,11 +318,11 @@ export default function MergeSheets() {
     setItem('tm_time_entries', timeEntries);
     setItem('tm_expenses', expenses);
     setUpdateResult({
-      entries:  timeEntries.length,
-      expenses: expenses.length,
+      entries:        timeEntries.length,
+      expenses:       expenses.length,
+      createdUsers:   createdUsers.length,
       skippedEntries:  merged.Hours.length    - timeEntries.length,
       skippedExpenses: merged.Expenses.length - expenses.length,
-      unmatchedEmp:  [...unmatchedEmp],
       unmatchedProj: [...unmatchedProj],
     });
   }
@@ -464,20 +474,18 @@ export default function MergeSheets() {
           </div>
 
           {updateResult && (
-            <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: 'var(--radius)', background: updateResult.unmatchedEmp.length || updateResult.unmatchedProj.length ? '#fdf0ee' : '#edf7ed', border: `1px solid ${updateResult.unmatchedEmp.length || updateResult.unmatchedProj.length ? '#f5c6c2' : '#b7deb7'}`, fontSize: '13px' }}>
-              <div style={{ fontWeight: 600, marginBottom: updateResult.unmatchedEmp.length || updateResult.unmatchedProj.length ? '8px' : 0 }}>
+            <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: 'var(--radius)', background: updateResult.unmatchedProj.length ? '#fdf0ee' : '#edf7ed', border: `1px solid ${updateResult.unmatchedProj.length ? '#f5c6c2' : '#b7deb7'}`, fontSize: '13px' }}>
+              <div style={{ fontWeight: 600, marginBottom: updateResult.unmatchedProj.length ? '8px' : 0 }}>
                 ✓ {updateResult.entries} time entr{updateResult.entries === 1 ? 'y' : 'ies'} and {updateResult.expenses} expense{updateResult.expenses === 1 ? '' : 's'} written to app.
+                {updateResult.createdUsers > 0 && <span style={{ fontWeight: 400, marginLeft: '6px' }}>{updateResult.createdUsers} new employee{updateResult.createdUsers === 1 ? '' : 's'} added.</span>}
                 {(updateResult.skippedEntries > 0 || updateResult.skippedExpenses > 0) && (
                   <span style={{ color: '#c0392b', fontWeight: 400, marginLeft: '6px' }}>
-                    {updateResult.skippedEntries + updateResult.skippedExpenses} row{updateResult.skippedEntries + updateResult.skippedExpenses === 1 ? '' : 's'} skipped due to unmatched names.
+                    {updateResult.skippedEntries + updateResult.skippedExpenses} row{updateResult.skippedEntries + updateResult.skippedExpenses === 1 ? '' : 's'} skipped — unknown projects.
                   </span>
                 )}
               </div>
-              {updateResult.unmatchedEmp.length > 0 && (
-                <div style={{ color: '#c0392b' }}>Unknown employees (not in Users): {updateResult.unmatchedEmp.join(', ')}</div>
-              )}
               {updateResult.unmatchedProj.length > 0 && (
-                <div style={{ color: '#c0392b' }}>Unknown projects (not in Projects): {updateResult.unmatchedProj.join(', ')}</div>
+                <div style={{ color: '#c0392b' }}>Unknown projects (add to Projects list): {updateResult.unmatchedProj.join(', ')}</div>
               )}
             </div>
           )}
