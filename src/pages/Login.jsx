@@ -85,11 +85,6 @@ export default function Login() {
             Sign In
           </button>
 
-          <div style={{ marginTop: '16px', padding: '12px', background: '#f0f4ed', borderRadius: 'var(--radius)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
-            <strong>Demo accounts</strong> (password: <code>password</code>)<br />
-            PM: pm@tamarack.ca<br />
-            Staff: km@tamarack.ca · ab@tamarack.ca · sr@tamarack.ca
-          </div>
         </form>
       </div>
     </div>
