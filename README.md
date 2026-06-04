@@ -40,19 +40,53 @@ The downloaded `master-timesheet.xlsx` includes:
 
 ## Tests
 
-Tests cover merge completeness — verifying no rows are silently dropped when parsing employee workbooks.
-
 ```bash
 npm test
 ```
 
-Tests read the `.xlsx` files in `timesheet/` and assert:
+21 tests across two suites. All tests are fast (no network, no browser).
 
-- Every file yields at least one hours row
-- Merged row count equals the sum of per-file counts (hours and expenses)
-- No parsed row is missing required fields (Employee, Date, Hours / Total)
+### Merge sheet integrity
 
-To run tests against a different set of workbooks, drop `.xlsx` files into `timesheet/` and re-run.
+Tests read the `.xlsx` files in `timesheet/` and verify the parse + merge pipeline end-to-end. Drop replacement workbooks into `timesheet/` and re-run to validate a new month.
+
+| # | Test |
+|---|------|
+| 1 | Every employee file yields at least one hours row |
+| 2 | Merged hours row count equals the sum of per-file counts |
+| 3 | Merged expense row count equals the sum of per-file counts |
+| 4 | No hours row is missing Employee, Date, or Hours |
+| 5 | No expense row is missing Employee or Total |
+| 6 | Every hours entry from every employee file appears in the master with identical values |
+| 7 | Every expense entry from every employee file appears in the master with identical values |
+| 8 | Master Hours cells display without a trailing decimal point (e.g. `8` not `8.`) |
+
+### Project hours calculation
+
+Pure-function tests for the hours-by-project computation used by the pie chart on the Projects page.
+
+**`computeProjectHours`**
+
+| # | Test |
+|---|------|
+| 1 | Returns empty array when there are no time entries |
+| 2 | Excludes projects that have no time entries |
+| 3 | Ignores entries whose project ID does not match any known project |
+| 4 | Sums multiple entries for the same project |
+| 5 | Sums hours correctly across multiple projects |
+| 6 | Returns projects sorted descending by hours |
+| 7 | Rounds accumulated hours to two decimal places |
+
+**`slicesForChart`**
+
+| # | Test |
+|---|------|
+| 1 | Returns empty array for empty input |
+| 2 | Computes `pct` proportionally for each slice |
+| 3 | All `pct` values sum to 1 |
+| 4 | Does not add an Other slice when project count is within the limit |
+| 5 | Groups excess projects into a single Other slice when over the limit |
+| 6 | Single-project input gets `pct` of 1 |
 
 ## Build & deploy
 
