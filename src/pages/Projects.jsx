@@ -251,7 +251,8 @@ function ProjectCard({ project, users, timeEntries, expenses, allBudgets, saveBu
           <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
             {project.phases.length} phase{project.phases.length !== 1 ? 's' : ''}
             {lastInvoice && <>&ensp;·&ensp;Last invoice: {fmtDate(lastInvoice.dateSent)}</>}
-            {hasActivity && <>&ensp;·&ensp;<span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>has data</span></>}
+            {totalSpentFees > 0 && <>&ensp;·&ensp;Fees: <span style={{ color: 'var(--color-nav)', fontWeight: 600 }}>{fmt(totalSpentFees)}</span></>}
+            {totalSpentExp  > 0 && <>&ensp;·&ensp;Exp: <span style={{ color: 'var(--color-nav)', fontWeight: 600 }}>{fmt(totalSpentExp)}</span></>}
           </div>
         </div>
         <span className={`badge badge-${project.status}`}>{project.status}</span>
@@ -321,6 +322,12 @@ function ClientGroup({ client, projects, users, timeEntries, expenses, allBudget
   const [open, setOpen] = useState(false);
   const isOpen = forceOpen || open;
 
+  const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+  const clientFees = projects.reduce((sum, p) =>
+    sum + timeEntries.filter(t => t.projectId === p.id).reduce((s, t) => s + t.hours * (userMap[t.employeeId]?.rate || 0), 0), 0);
+  const clientExp = projects.reduce((sum, p) =>
+    sum + expenses.filter(e => e.projectId === p.id).reduce((s, e) => s + e.total, 0), 0);
+
   return (
     <div style={{ marginBottom: '8px' }}>
       <div
@@ -342,6 +349,16 @@ function ClientGroup({ client, projects, users, timeEntries, expenses, allBudget
         }}>
           {client}
         </span>
+        {clientFees > 0 && (
+          <span style={{ fontSize: '12px', fontWeight: 600, color: isOpen ? 'rgba(255,255,255,0.85)' : 'var(--color-nav)' }}>
+            Fees: {fmt(clientFees)}
+          </span>
+        )}
+        {clientExp > 0 && (
+          <span style={{ fontSize: '12px', fontWeight: 600, color: isOpen ? 'rgba(255,255,255,0.85)' : 'var(--color-nav)' }}>
+            Exp: {fmt(clientExp)}
+          </span>
+        )}
         <span style={{
           fontSize: '12px', fontWeight: 600,
           color: isOpen ? 'rgba(255,255,255,0.7)' : 'var(--color-text-muted)',
