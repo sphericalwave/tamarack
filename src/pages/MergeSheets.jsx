@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import XLSX from 'xlsx-js-style';
 import { parseHours, parseExpenses } from '../lib/parseSheets.js';
+import { getItem, setItem, uid } from '../hooks/useStorage';
 
 const SHEET_NAMES = ['Hours', 'Expenses', 'Projects', 'Employees'];
 const CURRENCY_COLS = new Set(['Expense Amount', 'Tax', 'Tip', 'Total']);
@@ -15,6 +16,19 @@ function isDateStr(v) { return typeof v === 'string' && DATE_RE.test(v); }
 function dateStrToSerial(s) {
   const [d, m, y] = s.split('-');
   return Date.UTC(2000 + parseInt(y), MONTHS.indexOf(m), parseInt(d)) / 86400000 + 25569;
+}
+
+function initials(name) {
+  return name.trim().split(/\s+/).map(w => w[0].toUpperCase()).join('');
+}
+
+function excelDateToISO(s) {
+  if (!s || typeof s !== 'string') return '';
+  const [d, m, y] = s.split('-');
+  const monthIdx = MONTHS.indexOf(m);
+  if (monthIdx === -1) return '';
+  const year = 2000 + parseInt(y);
+  return `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(parseInt(d)).padStart(2, '0')}`;
 }
 
 function parseProjects(wb) {
@@ -215,6 +229,7 @@ export default function MergeSheets() {
   const [errors, setErrors]       = useState([]);
   const [timeSeqStart, setTimeSeqStart] = useState(1);
   const [expSeqStart,  setExpSeqStart]  = useState(1);
+  const [updateResult, setUpdateResult] = useState(null);
   const inputRef = useRef();
 
   const raw = files.reduce(
@@ -252,6 +267,54 @@ export default function MergeSheets() {
 
   function removeFile(name) {
     setFiles(prev => prev.filter(f => f.name !== name));
+  }
+
+  function updateAppData() {
+    const users    = getItem('tm_users')    || [];
+    const projects = getItem('tm_projects') || [];
+
+    const userByInitials = Object.fromEntries(users.map(u => [initials(u.name), u.id]));
+    const projectByName  = Object.fromEntries(projects.map(p => [p.name.trim(), p.id]));
+
+    const unmatchedEmp  = new Set();
+    const unmatchedProj = new Set();
+    const now = new Date().toISOString();
+
+    const timeEntries = merged.Hours
+      .filter(r => r.Employee && r.Project && r.Date && r.Hours)
+      .map(r => {
+        const empId  = userByInitials[r.Employee.trim()];
+        const projId = projectByName[r.Project.trim()];
+        if (!empId)  unmatchedEmp.add(r.Employee.trim());
+        if (!projId) unmatchedProj.add(r.Project.trim());
+        if (!empId || !projId) return null;
+        return { id: uid(), employeeId: empId, projectId: projId, phase: r.Phase || '', date: excelDateToISO(r.Date), hours: r.Hours, billingNotes: r['Billing Notes'] || '', createdAt: now };
+      })
+      .filter(Boolean);
+
+    const expenses = merged.Expenses
+      .filter(r => r.Employee && r.Project && r.Date && r.Total)
+      .map(r => {
+        const empId  = userByInitials[r.Employee.trim()];
+        const projId = projectByName[r.Project.trim()];
+        if (!empId)  unmatchedEmp.add(r.Employee.trim());
+        if (!projId) unmatchedProj.add(r.Project.trim());
+        if (!empId || !projId) return null;
+        const province = (r['Tax Rate'] || '').split(' - ')[0].trim();
+        return { id: uid(), employeeId: empId, projectId: projId, date: excelDateToISO(r.Date), amount: r['Expense Amount'] || 0, tax: r.Tax || 0, tip: r.Tip || 0, total: r.Total, vendorNotes: r['Vendor and Notes'] || '', province, paymentType: r['Payment Type'] || '', createdAt: now };
+      })
+      .filter(Boolean);
+
+    setItem('tm_time_entries', timeEntries);
+    setItem('tm_expenses', expenses);
+    setUpdateResult({
+      entries:  timeEntries.length,
+      expenses: expenses.length,
+      skippedEntries:  merged.Hours.length    - timeEntries.length,
+      skippedExpenses: merged.Expenses.length - expenses.length,
+      unmatchedEmp:  [...unmatchedEmp],
+      unmatchedProj: [...unmatchedProj],
+    });
   }
 
   function download() {
@@ -396,8 +459,29 @@ export default function MergeSheets() {
               {seqInput('Time Seq #', timeSeqStart, setTimeSeqStart)}
               {seqInput('Expense Seq #', expSeqStart, setExpSeqStart)}
               <button className="btn btn-primary" onClick={download}>↓ Download Master Sheet</button>
+              <button className="btn btn-outline" onClick={updateAppData}>↑ Update App Data</button>
             </div>
           </div>
+
+          {updateResult && (
+            <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: 'var(--radius)', background: updateResult.unmatchedEmp.length || updateResult.unmatchedProj.length ? '#fdf0ee' : '#edf7ed', border: `1px solid ${updateResult.unmatchedEmp.length || updateResult.unmatchedProj.length ? '#f5c6c2' : '#b7deb7'}`, fontSize: '13px' }}>
+              <div style={{ fontWeight: 600, marginBottom: updateResult.unmatchedEmp.length || updateResult.unmatchedProj.length ? '8px' : 0 }}>
+                ✓ {updateResult.entries} time entr{updateResult.entries === 1 ? 'y' : 'ies'} and {updateResult.expenses} expense{updateResult.expenses === 1 ? '' : 's'} written to app.
+                {(updateResult.skippedEntries > 0 || updateResult.skippedExpenses > 0) && (
+                  <span style={{ color: '#c0392b', fontWeight: 400, marginLeft: '6px' }}>
+                    {updateResult.skippedEntries + updateResult.skippedExpenses} row{updateResult.skippedEntries + updateResult.skippedExpenses === 1 ? '' : 's'} skipped due to unmatched names.
+                  </span>
+                )}
+              </div>
+              {updateResult.unmatchedEmp.length > 0 && (
+                <div style={{ color: '#c0392b' }}>Unknown employees (not in Users): {updateResult.unmatchedEmp.join(', ')}</div>
+              )}
+              {updateResult.unmatchedProj.length > 0 && (
+                <div style={{ color: '#c0392b' }}>Unknown projects (not in Projects): {updateResult.unmatchedProj.join(', ')}</div>
+              )}
+            </div>
+          )}
+
           <PreviewTable rows={merged[activeTab]} />
         </div>
       )}
