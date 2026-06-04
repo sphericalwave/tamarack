@@ -8,7 +8,7 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 
 function fmtDate(d) {
   if (!(d instanceof Date)) return '';
-  return `${String(d.getUTCDate()).padStart(2, '0')}-${MONTHS[d.getUTCMonth()]}-${String(d.getUTCFullYear()).slice(-2)}`;
+  return `${d.getUTCDate()}-${MONTHS[d.getUTCMonth()]}-${String(d.getUTCFullYear()).slice(-2)}`;
 }
 
 function parseProjects(wb) {
@@ -80,11 +80,16 @@ function colWidths(rows) {
 function applyDateFormat(ws) {
   if (!ws['!ref']) return;
   const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let R = range.s.r; R <= range.e.r; R++) {
-    for (let C = range.s.c; C <= range.e.c; C++) {
+  const dateCols = new Set();
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: range.s.r, c: C })];
+    if (cell?.v != null && /^date$/i.test(String(cell.v))) dateCols.add(C);
+  }
+  for (let R = range.s.r + 1; R <= range.e.r; R++) {
+    for (const C of dateCols) {
       const ref = XLSX.utils.encode_cell({ r: R, c: C });
       const cell = ws[ref];
-      if (cell && cell.t === 'd') cell.z = 'dd-mmm-yy';
+      if (cell) cell.z = 15;
     }
   }
 }
@@ -257,11 +262,19 @@ export default function MergeSheets() {
   function download() {
     const wb = XLSX.utils.book_new();
     for (const name of SHEET_NAMES) {
+      const serialized = merged[name].map(r => {
+        const out = {};
+        for (const [k, v] of Object.entries(r))
+          out[k] = v instanceof Date
+            ? Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()) / 86400000 + 25569
+            : v;
+        return out;
+      });
       const rows = merged[name];
-      const ws = rows.length
-        ? XLSX.utils.json_to_sheet(rows)
+      const ws = serialized.length
+        ? XLSX.utils.json_to_sheet(serialized)
         : XLSX.utils.aoa_to_sheet([[]]);
-      if (rows.length) {
+      if (serialized.length) {
         const headers = Object.keys(rows[0]);
         ws['!cols'] = colWidths(rows);
         applyDateFormat(ws);

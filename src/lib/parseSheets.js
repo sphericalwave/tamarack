@@ -2,7 +2,8 @@ import XLSX from 'xlsx-js-style';
 
 function excelDate(serial) {
   if (typeof serial !== 'number' || serial < 40000) return null;
-  return new Date((serial - 25569) * 86400000);
+  const d = new Date((Math.floor(serial) - 25569) * 86400000);
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
 function str(v) { return String(v ?? '').trim(); }
