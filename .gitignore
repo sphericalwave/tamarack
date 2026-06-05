@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Timesheet data (employee names, hours, expenses — keep off public repo)
+timesheet/
+
+# Receipt files and processed output
+receipts/
+receipts_verified/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
