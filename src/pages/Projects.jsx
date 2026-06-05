@@ -228,7 +228,7 @@ function ProjectCard({ project, users, timeEntries, expenses, allBudgets, saveBu
   }
 
   function spentFees(phase) {
-    return timeEntries.filter(t => t.projectId === project.id && t.phase === phase).reduce((sum, t) => sum + t.hours * (userMap[t.employeeId]?.rate || 0), 0);
+    return timeEntries.filter(t => t.projectId === project.id && t.phase === phase).reduce((sum, t) => sum + t.hours * (userMap[t.employeeId]?.rate || 125), 0);
   }
 
   const totalBudgetFees = project.phases.reduce((s, ph) => s + (phaseBudgets[ph]?.fees || 0), 0);
@@ -324,7 +324,7 @@ function ClientGroup({ client, projects, users, timeEntries, expenses, allBudget
 
   const userMap = Object.fromEntries(users.map(u => [u.id, u]));
   const clientFees = projects.reduce((sum, p) =>
-    sum + timeEntries.filter(t => t.projectId === p.id).reduce((s, t) => s + t.hours * (userMap[t.employeeId]?.rate || 0), 0), 0);
+    sum + timeEntries.filter(t => t.projectId === p.id).reduce((s, t) => s + t.hours * (userMap[t.employeeId]?.rate || 125), 0), 0);
   const clientExp = projects.reduce((sum, p) =>
     sum + expenses.filter(e => e.projectId === p.id).reduce((s, e) => s + e.total, 0), 0);
 
@@ -407,7 +407,7 @@ export default function Projects() {
   const totals = projects.reduce((acc, p) => {
     const pb = allBudgets[p.id] || {};
     acc.contracted += Object.values(pb).reduce((s, b) => s + (b.fees || 0) + (b.expenses || 0), 0);
-    acc.spent += timeEntries.filter(t => t.projectId === p.id).reduce((s, t) => s + t.hours * (userMap[t.employeeId]?.rate || 0), 0);
+    acc.spent += timeEntries.filter(t => t.projectId === p.id).reduce((s, t) => s + t.hours * (userMap[t.employeeId]?.rate || 125), 0);
     acc.spent += expenses.filter(e => e.projectId === p.id).reduce((s, e) => s + e.total, 0);
     return acc;
   }, { contracted: 0, spent: 0 });

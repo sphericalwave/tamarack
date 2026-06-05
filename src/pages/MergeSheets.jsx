@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import XLSX from 'xlsx-js-style';
 import { parseHours, parseExpenses } from '../lib/parseSheets.js';
+import { validateImportTotals } from '../lib/importData.js';
 import { getItem, setItem, uid } from '../hooks/useStorage';
 
 const SHEET_NAMES = ['Hours', 'Expenses', 'Projects', 'Employees'];
@@ -271,8 +272,14 @@ export default function MergeSheets() {
 
   function updateAppData() {
     const now = new Date().toISOString();
+    const normDash = s => s.replace(/\s*[–—]\s*/g, ' - ').trim();
 
-    // Sync users: create a record for every initials found in Hours not already in tm_users
+    function clientFromName(name) {
+      const i = name.search(/\s+-\s+/);
+      return i >= 0 ? name.slice(0, i).trim() : name;
+    }
+
+    // Sync users
     const existingUsers = getItem('tm_users') || [];
     const userKeyOf = u => u.initials || initials(u.name);
     const existingKeys = new Set(existingUsers.map(userKeyOf));
@@ -285,19 +292,42 @@ export default function MergeSheets() {
     const users = [...existingUsers, ...createdUsers];
     if (createdUsers.length) setItem('tm_users', users);
 
-    const projects = getItem('tm_projects') || [];
-    const userByInitials = Object.fromEntries(users.map(u => [userKeyOf(u), u.id]));
-    const projectByName  = Object.fromEntries(projects.map(p => [p.name.trim(), p.id]));
+    // Build project lookup; auto-create any project not already in storage
+    const existingProjects = getItem('tm_projects') || [];
+    const projectByName = Object.fromEntries(existingProjects.map(p => [normDash(p.name), p.id]));
 
-    const unmatchedProj = new Set();
+    // Collect all project names + their phases from the sheet
+    const sheetProjects = new Map(); // normName -> { name, phases: Set }
+    for (const r of [...merged.Hours, ...merged.Expenses]) {
+      if (!r.Project?.trim()) continue;
+      const norm = normDash(r.Project);
+      if (!sheetProjects.has(norm)) sheetProjects.set(norm, { name: normDash(r.Project), phases: new Set() });
+      if (r.Phase?.trim()) sheetProjects.get(norm).phases.add(r.Phase.trim());
+    }
+
+    const createdProjects = [];
+    for (const [norm, info] of sheetProjects) {
+      if (!projectByName[norm]) {
+        const p = { id: uid(), name: info.name, client: clientFromName(info.name), status: 'active', pmId: null, phases: [...info.phases] };
+        createdProjects.push(p);
+        projectByName[norm] = p.id;
+      }
+    }
+    if (createdProjects.length) setItem('tm_projects', [...existingProjects, ...createdProjects]);
+
+    const userByInitials = Object.fromEntries(users.map(u => [userKeyOf(u), u.id]));
+
+    const skippedRows = [];
 
     const timeEntries = merged.Hours
       .filter(r => r.Employee && r.Project && r.Date && r.Hours)
       .map(r => {
         const empId  = userByInitials[r.Employee.trim()];
-        const projId = projectByName[r.Project.trim()];
-        if (!projId) unmatchedProj.add(r.Project.trim());
-        if (!empId || !projId) return null;
+        const projId = projectByName[normDash(r.Project)];
+        if (!empId || !projId) {
+          skippedRows.push({ type: 'Hours', Employee: r.Employee, Project: r.Project, Date: r.Date, Value: `${r.Hours}h`, Reason: !empId ? 'unknown employee' : 'unknown project' });
+          return null;
+        }
         return { id: uid(), employeeId: empId, projectId: projId, phase: r.Phase || '', date: excelDateToISO(r.Date), hours: r.Hours, billingNotes: r['Billing Notes'] || '', createdAt: now };
       })
       .filter(Boolean);
@@ -306,9 +336,11 @@ export default function MergeSheets() {
       .filter(r => r.Employee && r.Project && r.Date && r.Total)
       .map(r => {
         const empId  = userByInitials[r.Employee.trim()];
-        const projId = projectByName[r.Project.trim()];
-        if (!projId) unmatchedProj.add(r.Project.trim());
-        if (!empId || !projId) return null;
+        const projId = projectByName[normDash(r.Project)];
+        if (!empId || !projId) {
+          skippedRows.push({ type: 'Expense', Employee: r.Employee, Project: r.Project, Date: r.Date, Value: `$${r.Total}`, Reason: !empId ? 'unknown employee' : 'unknown project' });
+          return null;
+        }
         const province = (r['Tax Rate'] || '').split(' - ')[0].trim();
         return { id: uid(), employeeId: empId, projectId: projId, date: excelDateToISO(r.Date), amount: r['Expense Amount'] || 0, tax: r.Tax || 0, tip: r.Tip || 0, total: r.Total, vendorNotes: r['Vendor and Notes'] || '', province, paymentType: r['Payment Type'] || '', createdAt: now };
       })
@@ -317,12 +349,12 @@ export default function MergeSheets() {
     setItem('tm_time_entries', timeEntries);
     setItem('tm_expenses', expenses);
     setUpdateResult({
-      entries:        timeEntries.length,
-      expenses:       expenses.length,
-      createdUsers:   createdUsers.length,
-      skippedEntries:  merged.Hours.length    - timeEntries.length,
-      skippedExpenses: merged.Expenses.length - expenses.length,
-      unmatchedProj: [...unmatchedProj],
+      entries:         timeEntries.length,
+      expenses:        expenses.length,
+      createdUsers:    createdUsers.length,
+      createdProjects: createdProjects.length,
+      skippedRows,
+      validation:      validateImportTotals(merged.Hours, merged.Expenses, timeEntries, expenses),
     });
   }
 
@@ -472,22 +504,60 @@ export default function MergeSheets() {
             </div>
           </div>
 
-          {updateResult && (
-            <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: 'var(--radius)', background: updateResult.unmatchedProj.length ? '#fdf0ee' : '#edf7ed', border: `1px solid ${updateResult.unmatchedProj.length ? '#f5c6c2' : '#b7deb7'}`, fontSize: '13px' }}>
-              <div style={{ fontWeight: 600, marginBottom: updateResult.unmatchedProj.length ? '8px' : 0 }}>
-                ✓ {updateResult.entries} time entr{updateResult.entries === 1 ? 'y' : 'ies'} and {updateResult.expenses} expense{updateResult.expenses === 1 ? '' : 's'} written to app.
-                {updateResult.createdUsers > 0 && <span style={{ fontWeight: 400, marginLeft: '6px' }}>{updateResult.createdUsers} new employee{updateResult.createdUsers === 1 ? '' : 's'} added.</span>}
-                {(updateResult.skippedEntries > 0 || updateResult.skippedExpenses > 0) && (
-                  <span style={{ color: '#c0392b', fontWeight: 400, marginLeft: '6px' }}>
-                    {updateResult.skippedEntries + updateResult.skippedExpenses} row{updateResult.skippedEntries + updateResult.skippedExpenses === 1 ? '' : 's'} skipped — unknown projects.
-                  </span>
+          {updateResult && (() => {
+            const { entries, expenses: expCount, createdUsers, createdProjects, skippedRows, validation: v } = updateResult;
+            const hasSkipped = skippedRows.length > 0;
+            const allGood = !hasSkipped && v.hoursMatch && v.expensesMatch;
+            return (
+              <div style={{ marginBottom: '16px', fontSize: '13px' }}>
+                {/* Summary line */}
+                <div style={{ padding: '10px 14px', borderRadius: 'var(--radius)', background: allGood ? '#edf7ed' : '#fdf0ee', border: `1px solid ${allGood ? '#b7deb7' : '#f5c6c2'}`, marginBottom: hasSkipped ? '8px' : 0 }}>
+                  <span style={{ fontWeight: 600 }}>✓ {entries} time entr{entries === 1 ? 'y' : 'ies'} and {expCount} expense{expCount === 1 ? '' : 's'} written to app.</span>
+                  {createdUsers > 0 && <span style={{ marginLeft: '8px' }}>{createdUsers} new employee{createdUsers === 1 ? '' : 's'} added.</span>}
+                  {createdProjects > 0 && <span style={{ marginLeft: '8px' }}>{createdProjects} new project{createdProjects === 1 ? '' : 's'} created.</span>}
+                  {hasSkipped && <span style={{ color: '#c0392b', marginLeft: '8px', fontWeight: 600 }}>{skippedRows.length} row{skippedRows.length === 1 ? '' : 's'} skipped.</span>}
+                  {/* Validation totals */}
+                  <div style={{ marginTop: '8px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    <span style={{ color: v.hoursMatch ? '#27ae60' : '#c0392b' }}>
+                      {v.hoursMatch ? '✓' : '✗'} Hours: sheet {v.sheetHours}h → imported {v.importedHours}h
+                    </span>
+                    <span style={{ color: v.expensesMatch ? '#27ae60' : '#c0392b' }}>
+                      {v.expensesMatch ? '✓' : '✗'} Expenses: sheet ${v.sheetExpenses.toFixed(2)} → imported ${v.importedExpenses.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Skipped rows table */}
+                {hasSkipped && (
+                  <div style={{ border: '1px solid #f5c6c2', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                    <div style={{ background: '#fdf0ee', padding: '7px 14px', fontWeight: 600, color: '#c0392b', borderBottom: '1px solid #f5c6c2' }}>
+                      Skipped rows
+                    </div>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                        <thead>
+                          <tr style={{ background: '#fdf0ee', borderBottom: '1px solid #f5c6c2' }}>
+                            {['Type','Employee','Project','Date','Value','Reason'].map(h => (
+                              <th key={h} style={{ padding: '5px 10px', textAlign: 'left', fontWeight: 600, color: '#c0392b', whiteSpace: 'nowrap' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {skippedRows.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid var(--color-border)', background: i % 2 ? '#fff9f9' : '#fff' }}>
+                              {['type','Employee','Project','Date','Value','Reason'].map(k => (
+                                <td key={k} style={{ padding: '5px 10px', whiteSpace: 'nowrap', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r[k]}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 )}
               </div>
-              {updateResult.unmatchedProj.length > 0 && (
-                <div style={{ color: '#c0392b' }}>Unknown projects (add to Projects list): {updateResult.unmatchedProj.join(', ')}</div>
-              )}
-            </div>
-          )}
+            );
+          })()}
 
           <PreviewTable rows={merged[activeTab]} />
         </div>

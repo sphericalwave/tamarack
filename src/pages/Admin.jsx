@@ -41,7 +41,7 @@ function ProjectsTab() {
     const contracted = Object.values(pb).reduce((s, b) => s + (b.fees || 0) + (b.expenses || 0), 0);
     const spentFees = timeEntries
       .filter(t => t.projectId === p.id)
-      .reduce((s, t) => s + t.hours * (userObjMap[t.employeeId]?.rate || 0), 0);
+      .reduce((s, t) => s + t.hours * (userObjMap[t.employeeId]?.rate || 125), 0);
     const spentExp = expenses
       .filter(e => e.projectId === p.id)
       .reduce((s, e) => s + e.total, 0);

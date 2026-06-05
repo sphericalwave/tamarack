@@ -269,7 +269,7 @@ export default function ProjectDetail() {
   function spentFees(phase) {
     return timeEntries
       .filter(t => t.projectId === id && t.phase === phase)
-      .reduce((sum, t) => sum + t.hours * (userMap[t.employeeId]?.rate || 0), 0);
+      .reduce((sum, t) => sum + t.hours * (userMap[t.employeeId]?.rate || 125), 0);
   }
 
   const totalBudgetFees = project.phases.reduce((s, ph) => s + (phaseBudgets[ph]?.fees || 0), 0);
